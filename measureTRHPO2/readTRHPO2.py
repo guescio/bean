@@ -103,9 +103,8 @@ def readTRHPO2(args):
                     dpsht.append( float( values.split()[2 + args.bme*nbme]))
                 if args.ox2:
                     o2.append( float( values.split()[0 + args.bme*nbme + args.sht*nsht]))
-                if args.ox2:
-                    tb.append( float( values.split()[0 + args.bme*nbme + args.sht*nsht + args.ox2*nox2]))
-                    vb.append( float( values.split()[1 + args.bme*nbme + args.sht*nsht + args.ox2*nox2]))
+                tb.append( float( values.split()[0 + args.bme*nbme + args.sht*nsht + args.ox2*nox2]))
+                vb.append( float( values.split()[1 + args.bme*nbme + args.sht*nsht + args.ox2*nox2]))
             
                 #plot
                 if args.draw:
