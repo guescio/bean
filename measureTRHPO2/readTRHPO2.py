@@ -16,6 +16,12 @@ import matplotlib.pyplot as plt
 
 #******************************************
 def readTRHPO2(args):
+
+    #available sensors
+    if args.all:
+        args.bme = True
+        args.sht = True
+        args.ox2 = True
     
     #plot interactively
     plt.ion()
@@ -149,6 +155,7 @@ if __name__ == '__main__':
     parser.add_argument('--bme', dest='bme', action='store_true', default=False, help='BME280')
     parser.add_argument('--sht', dest='sht', action='store_true', default=False, help='SHT35')
     parser.add_argument('--ox2', dest='ox2', action='store_true', default=False, help='oxygen')
+    parser.add_argument('--all', dest='all', action='store_true', default=False, help='all sensors')
     parser.add_argument('-ly', '--logy', dest='logy', action='store_true', default=False, help='logarithmic y axis')
     parser.add_argument('--nop', dest='nop', action='store_true', default=False, help='do not draw pressure')
     args = parser.parse_args()

@@ -6,7 +6,7 @@
 //******************************************
 //definitions
 #define BME280
-//#define SHT35
+#define SHT35
 #define OXYGEN
 
 #define INTERVAL (10000)//ms
