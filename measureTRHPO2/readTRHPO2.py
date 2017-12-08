@@ -15,6 +15,19 @@ import serial, time, sys, collections, os, argparse
 import matplotlib.pyplot as plt
 
 #******************************************
+
+def outputDir():
+    relativeDir = '/data/'+time.strftime('%Y')+'/'+time.strftime('%m')
+#    relativeDir = '/data/Monitoring'
+
+    directory = os.path.dirname(os.path.realpath(__file__)) + relativeDir
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+        # print('Error: directory " + relativeDir + " does not exist.')
+        # sys.exit()
+    return directory
+
+
 def readTRHPO2(args):
 
     #available sensors
@@ -65,37 +78,44 @@ def readTRHPO2(args):
         
             #read line from serial output
             values = str(ser.readline().decode('utf-8')).strip()
-            
+
             #print time stamp and serial output
             timestamp = time.strftime('%Y%m%d%H%M%S')
-            if args.verbose:
-                print(timestamp, values)
-
-            #save data locally
-            if args.save:
+            timeInS = time.time()
+            if start is None:
+                start = timeInS
+                # if args.verbose:
+                # todo
+                #     print("Print a header for the table here")
                 
-                #check and create data directory
-                directory = os.path.dirname(os.path.realpath(__file__))+'/data/'+time.strftime('%Y')+'/'+time.strftime('%m')
-                if not os.path.exists(directory):
-                    os.makedirs(directory)
-
-                #store data locally
-                with open(directory+"/"+time.strftime('%Y%m%d')+".log", "a") as f:
-                    f.write(timestamp + " " + values + "\n")
-        
             #check if the serial output has the expected number of entries
             expectedMeasurements=0
             if args.bme: expectedMeasurements+=nbme
             if args.sht: expectedMeasurements+=nsht
             if args.ox2: expectedMeasurements+=nox2
             expectedMeasurements+=nbean
+            correctNumberMeasurements = False
+            if (len(values.split()) == expectedMeasurements):
+                correctNumberMeasurements = True
 
-            if len(values.split()) == expectedMeasurements:
-            
+            line = timestamp + " " + str(round(timeInS)) + " " + values
+            if not correctNumberMeasurements:
+                line = "# " + line
+                
+            if args.verbose:
+                print(line)
+
+            #save data locally
+            if args.save:
+                
+                #store data locally
+                directory = outputDir()
+                with open(directory+"/"+time.strftime('%Y%m%d')+".log", "a") as f:
+                    f.write(line + "\n")
+                        
+            if correctNumberMeasurements:
                 #append time to collection for plotting
-                if start is None:
-                    start = time.time()
-                times.append(time.time() - start)
+                times.append(timeInS - start)
                     
                 #parse serial output and append to collections for plotting
                 if args.bme:
@@ -137,7 +157,7 @@ def readTRHPO2(args):
                     plt.pause(0.1)
 
             else:
-                print("the number of measurements does not match the expected number from the sensors listed")
+                print("# The number of measurements does not match the expected number from the sensors listed.")
                 #sys.exit(0)
 
     except KeyboardInterrupt:
