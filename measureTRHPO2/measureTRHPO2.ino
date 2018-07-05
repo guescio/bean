@@ -82,7 +82,7 @@ float getDewPoint(float t, float rh){
 //get oxygen concentration
 #ifdef OXYGEN
 float getOxygenConcentration() {
-  return (analogRead(pinADC) * (Vref/1024.) * (0.21/2.0));
+  return (analogRead(pinADC) * (Vref/1023.) * (0.21/2.0));
 }
 #endif //OXYGEN
 
