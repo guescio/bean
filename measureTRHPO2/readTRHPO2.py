@@ -1,13 +1,12 @@
 #!/usr/bin/env python
-#A script to read temperature, relative humidity, barometric pressure, oxygen level and battery level and print, plot or save the data.
+#A script to read temperature, relative humidity, dew point, barometric pressure and battery level and print, plot or save the data.
 
-#BME280: t, rh, dp, p
 #SHT35:  t, rh, dp
-#oxygen: o2
-#bean:   t, v
+#BME280: p, (t, rh, dp)
+#bean:   v, (t)
 
 #******************************************
-__version__ = '0.0'
+__version__ = '0.2'
 
 #******************************************
 #import stuff
@@ -17,40 +16,38 @@ import matplotlib.pyplot as plt
 #******************************************
 def readTRHPO2(args):
 
-    #available sensors
+    #measurements flags
+    if args.t or args.rh or args.dp or args.p or args.v:
+        args.all = False
     if args.all:
-        args.bme = True
-        args.sht = True
-        args.ox2 = True
+        args.t  = True
+        args.rh = True
+        args.dp = True
+        args.p  = True
+        args.v  = True
+    if args.nop:
+        args.p = False
     
     #plot interactively
     plt.ion()
 
+    #expected number of measurements
+    expectedMeasurements=5
+    
     #create collections limited in length for plotting
     length = 600
     times = collections.deque(maxlen=length)
 
-    #BME280
-    nbme = 4 #measurements by BME280
-    tbme  = collections.deque(maxlen=length)
-    rhbme = collections.deque(maxlen=length)
-    dpbme = collections.deque(maxlen=length)
-    pbme  = collections.deque(maxlen=length)
-
     #SHT35
-    nsht = 3 #measurements by SHT35
-    tsht  = collections.deque(maxlen=length)
-    rhsht = collections.deque(maxlen=length)
-    dpsht = collections.deque(maxlen=length)
+    tsht  = collections.deque(maxlen=length)#temperature
+    rhsht = collections.deque(maxlen=length)#relative humidity
+    dpsht = collections.deque(maxlen=length)#dew point
 
-    #oxygen
-    nox2 = 1 #measurements by oxygen sensor
-    o2 = collections.deque(maxlen=length)
-
+    #BME280
+    pbme  = collections.deque(maxlen=length)#pressure
+    
     #bean
-    nbean = 2 #measurements by bean
-    tb = collections.deque(maxlen=length)
-    vb = collections.deque(maxlen=length)
+    vb = collections.deque(maxlen=length)#battery voltage
     
     #create serial object to read from LightBlue Bean
     ser = serial.Serial('/tmp/cu.LightBlue-Bean')#, timeout=10)
@@ -60,6 +57,10 @@ def readTRHPO2(args):
 
     try:
 
+        #measuements and units
+        if args.verbose:
+            print('date           T[C] RH[%] DP[C] P[hPa] V[V]')
+        
         #loop
         while True:
         
@@ -84,12 +85,6 @@ def readTRHPO2(args):
                     f.write(timestamp + " " + values + "\n")
         
             #check if the serial output has the expected number of entries
-            expectedMeasurements=0
-            if args.bme: expectedMeasurements+=nbme
-            if args.sht: expectedMeasurements+=nsht
-            if args.ox2: expectedMeasurements+=nox2
-            expectedMeasurements+=nbean
-
             if len(values.split()) == expectedMeasurements:
             
                 #append time to collection for plotting
@@ -98,37 +93,25 @@ def readTRHPO2(args):
                 times.append(time.time() - start)
                     
                 #parse serial output and append to collections for plotting
-                if args.bme:
-                    tbme.append(  float( values.split()[0]))
-                    rhbme.append( float( values.split()[1]))
-                    dpbme.append( float( values.split()[2]))
-                    pbme.append(  float( values.split()[3]))
-                if args.sht:
-                    tsht.append(  float( values.split()[0 + args.bme*nbme]))
-                    rhsht.append( float( values.split()[1 + args.bme*nbme]))
-                    dpsht.append( float( values.split()[2 + args.bme*nbme]))
-                if args.ox2:
-                    o2.append( float( values.split()[0 + args.bme*nbme + args.sht*nsht]))
-                tb.append( float( values.split()[0 + args.bme*nbme + args.sht*nsht + args.ox2*nox2]))
-                vb.append( float( values.split()[1 + args.bme*nbme + args.sht*nsht + args.ox2*nox2]))
+                tsht.append(  float( values.split()[0]))
+                rhsht.append( float( values.split()[1]))
+                dpsht.append( float( values.split()[2]))
+                pbme.append(  float( values.split()[3]))
+                vb.append(    float( values.split()[4]))
             
                 #plot
                 if args.draw:
                     plt.cla()#clear axes
-                    if args.bme:
-                        plt.plot(times, tbme,  color='red', label='t$_{BME}$ [C]')
-                        plt.plot(times, rhbme, color='cyan', label='RH$_{BME}$ [%]')
-                        plt.plot(times, dpbme, color='orange', label='DP$_{BME}$ [C]')
-                        if not args.nop:
-                            plt.plot(times, pbme, color='lime', label='p$_{BME}$ [hPa]')
-                    if args.sht:
-                        plt.plot(times, tsht,  color='darkred', label='t$_{SHT}$ [C]')
-                        plt.plot(times, rhsht, color='darkcyan', label='RH$_{SHT}$ [%]')
+                    if args.t:
+                        plt.plot(times, tsht,  color='darkred',    label='t$_{SHT}$ [C]')
+                    if args.rh:
+                        plt.plot(times, rhsht, color='darkcyan',   label='RH$_{SHT}$ [%]')
+                    if args.dp:
                         plt.plot(times, dpsht, color='darkorange', label='DP$_{SHT}$ [C]')
-                    if args.ox2:
-                        plt.plot(times, o2,    color='blue', label='O$_{2}$ [%]')
-                    plt.plot(times, tb, color='salmon', label='t$_{bean}$ [C]')
-                    plt.plot(times, vb, color='green', label='v$_{bean}$ [V]')
+                    if args.p:
+                        plt.plot(times, pbme,  color='indigo',       label='p$_{BME}$ [hPa]')
+                    if args.v:
+                        plt.plot(times, vb,    color='darkgreen',      label='v$_{bean}$ [V]')
                     plt.legend(fontsize='x-small', loc=2)
                     if args.logy:
                         plt.yscale('log')
@@ -152,12 +135,14 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--save', dest='save', action='store_true', default=False, help='save data')
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', default=False, help='verbose mode')
     parser.add_argument('-d', '--draw', dest='draw', action='store_true', default=False, help='draw')
-    parser.add_argument('--bme', dest='bme', action='store_true', default=False, help='BME280')
-    parser.add_argument('--sht', dest='sht', action='store_true', default=False, help='SHT35')
-    parser.add_argument('--ox2', dest='ox2', action='store_true', default=False, help='oxygen')
-    parser.add_argument('--all', dest='all', action='store_true', default=False, help='all sensors')
     parser.add_argument('-ly', '--logy', dest='logy', action='store_true', default=False, help='logarithmic y axis')
     parser.add_argument('--nop', dest='nop', action='store_true', default=False, help='do not draw pressure')
+    parser.add_argument('--all', dest='all', action='store_true', default=True, help='all measurements')
+    parser.add_argument('--t',  dest='t',  action='store_true', default=False, help='temperature')
+    parser.add_argument('--rh', dest='rh', action='store_true', default=False, help='relative humidity')
+    parser.add_argument('--dp', dest='dp', action='store_true', default=False, help='dew point')
+    parser.add_argument('--p',  dest='p',  action='store_true', default=False, help='pressure')
+    parser.add_argument('--v',  dest='v',  action='store_true', default=False, help='voltage')
     args = parser.parse_args()
 
     readTRHPO2(args)
